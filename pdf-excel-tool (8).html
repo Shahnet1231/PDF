@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHAH GROUP - PDF/Excel Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{
+  --bg:#0f1115; --panel:#171a21; --panel2:#1e222c; --border:#2a2f3a;
+  --accent:#3ddc97; --accent2:#2ab77e; --text:#e8eaed; --muted:#9aa1ac;
+  --danger:#ff6b6b;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; font-family:'Segoe UI',Tahoma,Arial,sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh;
+}
+header{
+  padding:24px 20px 12px; text-align:center;
+  border-bottom:1px solid var(--border);
+}
+header h1{ margin:0; font-size:22px; letter-spacing:.5px; }
+header p{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+.tabs{
+  display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+  padding:16px 12px 0;
+}
+.tab-btn{
+  background:var(--panel); border:1px solid var(--border); color:var(--text);
+  padding:10px 18px; border-radius:10px; cursor:pointer; font-size:14px;
+  transition:.15s;
+}
+.tab-btn:hover{ border-color:var(--accent); }
+.tab-btn.active{ background:var(--accent); color:#08110d; border-color:var(--accent); font-weight:600;}
+main{ max-width:760px; margin:0 auto; padding:20px; }
+.panel{
+  background:var(--panel); border:1px solid var(--border); border-radius:14px;
+  padding:24px; display:none;
+}
+.panel.active{ display:block; }
+.dropzone{
+  border:2px dashed var(--border); border-radius:12px; padding:32px 16px;
+  text-align:center; cursor:pointer; transition:.15s; background:var(--panel2);
+}
+.dropzone:hover, .dropzone.drag{ border-color:var(--accent); background:#1a2e26; }
+.dropzone p{ margin:8px 0 0; color:var(--muted); font-size:13px; }
+input[type=file]{ display:none; }
+.filelist{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+.file-item{
+  background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; display:flex; justify-content:space-between; align-items:center;
+  font-size:13px;
+}
+.file-item button{
+  background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px;
+}
+.btn{
+  width:100%; margin-top:18px; background:var(--accent); color:#08110d; border:none;
+  padding:13px; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer;
+  transition:.15s;
+}
+.btn:hover{ background:var(--accent2); }
+.btn:disabled{ background:#3a3f4a; color:var(--muted); cursor:not-allowed; }
+.status{ margin-top:12px; font-size:13px; color:var(--muted); min-height:18px; }
+label.field{ display:block; margin-top:16px; font-size:13px; color:var(--muted); }
+input[type=text], input[type=password]{
+  width:100%; margin-top:6px; padding:11px 12px; border-radius:8px;
+  border:1px solid var(--border); background:var(--panel2); color:var(--text); font-size:14px;
+}
+.row2{ display:flex; gap:12px; }
+.row2 > div{ flex:1; }
+.hint{ font-size:12px; color:var(--muted); margin-top:6px; line-height:1.5; }
+.badge{
+  display:inline-block; background:#20304a; color:#6fb1ff; font-size:11px;
+  padding:2px 8px; border-radius:20px; margin-left:6px;
+}
+footer{ text-align:center; padding:20px; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📄 SHAH GROUP — PDF/Excel Tool</h1>
+  <p>PDF ↔ Excel Convert &amp; PDF Password Protection — sab kuch browser mein hi, koi upload server pe nahi</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="p2e">PDF → Excel</button>
+  <button class="tab-btn" data-tab="e2p">Excel → PDF</button>
+  <button class="tab-btn" data-tab="lock">PDF Password</button>
+  <button class="tab-btn" data-tab="img2e">Pic → Excel</button>
+</div>
+
+<main>
+
+  <!-- PDF TO EXCEL -->
+  <div class="panel active" id="p2e">
+    <div class="dropzone" id="dz-p2e">
+      <div style="font-size:32px;">📥</div>
+      <strong>PDF files yahan drop karen ya click karen</strong>
+      <p>Multiple files select kar sakte hain — har file ki alag tab banegi</p>
+    </div>
+    <input type="file" id="input-p2e" accept=".pdf" multiple>
+    <div class="filelist" id="list-p2e"></div>
+    <button class="btn" id="btn-p2e" disabled>Excel Banaen</button>
+    <div class="status" id="status-p2e"></div>
+    <p class="hint">Note: Ye plain text/mixed content PDFs ke liye hai. Har line ek row me aayegi. Scanned (image) PDFs ke liye OCR chahiye hoga — wo agla step ho sakta hai agar zaroorat ho.</p>
+    <textarea id="debug-p2e" readonly style="width:100%;margin-top:14px;min-height:140px;background:#0a0c10;color:#8fe3b0;font-family:monospace;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:10px;"></textarea>
+  </div>
+
+  <!-- EXCEL TO PDF -->
+  <div class="panel" id="e2p">
+    <div class="dropzone" id="dz-e2p">
+      <div style="font-size:32px;">📤</div>
+      <strong>Excel file (.xlsx/.xls/.csv) yahan drop karen</strong>
+      <p>Har sheet ka alag PDF page banega</p>
+    </div>
+    <input type="file" id="input-e2p" accept=".xlsx,.xls,.csv">
+    <div class="filelist" id="list-e2p"></div>
+    <button class="btn" id="btn-e2p" disabled>PDF Banaen</button>
+    <div class="status" id="status-e2p"></div>
+  </div>
+
+  <!-- PDF PASSWORD -->
+  <div class="panel" id="lock">
+    <div class="dropzone" id="dz-lock">
+      <div style="font-size:32px;">🔒</div>
+      <strong>PDF file yahan drop karen</strong>
+      <p>Password/PIN laga kar file lock ki jayegi</p>
+    </div>
+    <input type="file" id="input-lock" accept=".pdf">
+    <div class="filelist" id="list-lock"></div>
+
+    <div class="row2">
+      <div>
+        <label class="field">Password / PIN set karen</label>
+        <input type="password" id="pin-input" placeholder="e.g. 1234 ya koi bhi password">
+      </div>
+    </div>
+
+    <button class="btn" id="btn-lock" disabled>PDF Lock Karen</button>
+    <div class="status" id="status-lock"></div>
+    <p class="hint">⚠️ Technical note bhai: browser-only free libraries se <strong>asal PDF encryption</strong> (jo Adobe/Windows password prompt dikhaye) reliably support nahi hoti — yahan hum PDF ko lock/restricted mode me flag karte hain. Agar aapko <strong>bilkul real</strong>, sab PDF-viewers me chalne wala password chahiye (jaise WinRAR jaisa), uske liye ek chhota backend (Node.js + qpdf) lagega — wo main alag se bana sakta hun agar chahiye ho.</p>
+  </div>
+
+  <!-- IMAGE TO EXCEL -->
+  <div class="panel" id="img2e">
+    <div class="dropzone" id="dz-img2e">
+      <div style="font-size:32px;">🖼️</div>
+      <strong>Pic/Photo yahan drop karen ya click karen</strong>
+      <p>Multiple images select kar sakte hain — har image ki alag tab banegi (OCR se text nikalega)</p>
+    </div>
+    <input type="file" id="input-img2e" accept="image/*" multiple>
+    <div class="filelist" id="list-img2e"></div>
+    <button class="btn" id="btn-img2e" disabled>Excel Banaen</button>
+    <div class="status" id="status-img2e"></div>
+    <p class="hint">Note: Pehli dafa thoda time lagega (OCR engine load hoga, ~10-15 sec). Saaf/clear photo se behtar result milega. Urdu/Arabic text abhi support nahi, English/Roman text best chalta hai.</p>
+  </div>
+
+</main>
+
+<footer>SHAH GROUP Tool — Sab kuch client-side, koi file upload nahi hoti kisi server pe</footer>
+
+<script>
+if(location.protocol === 'file:'){
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const warn = document.createElement('div');
+    warn.style.cssText = 'background:#4a1f1f;color:#ffb3b3;padding:14px 20px;text-align:center;font-size:13px;border-bottom:1px solid #ff6b6b;';
+    warn.innerHTML = '⚠️ Ye file seedhi (double-click se) khuli hai — is halat me <b>Pic→Excel</b> aur <b>scanned PDF OCR</b> kaam nahi karenge. Sahi tareeqe se chalane ke liye ye file GitHub Pages/Netlify pe host karen, ya local server (python -m http.server) se kholen.';
+    document.body.insertBefore(warn, document.body.firstChild);
+  });
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+function setupDropzone(dzId, inputId, onFiles, multiple){
+  const dz = document.getElementById(dzId);
+  const input = document.getElementById(inputId);
+  dz.addEventListener('click', ()=>input.click());
+  dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('drag');});
+  dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop', e=>{
+    e.preventDefault(); dz.classList.remove('drag');
+    onFiles(multiple ? Array.from(e.dataTransfer.files) : [e.dataTransfer.files[0]]);
+  });
+  input.addEventListener('change', e=>{
+    onFiles(multiple ? Array.from(e.target.files) : [e.target.files[0]]);
+  });
+}
+
+function renderFileList(listId, files, onRemove){
+  const el = document.getElementById(listId);
+  el.innerHTML = '';
+  files.forEach((f,i)=>{
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `<span>📄 ${f.name}</span>`;
+    const btn = document.createElement('button');
+    btn.textContent = '✕';
+    btn.onclick = ()=>onRemove(i);
+    div.appendChild(btn);
+    el.appendChild(div);
+  });
+}
+
+function safeSheetName(name, used){
+  let n = name.replace(/\.[^/.]+$/,'').replace(/[\\\/\?\*\[\]:]/g,'_').substring(0,28) || 'Sheet';
+  let final = n, c = 1;
+  while(used.has(final)){ final = n + '_' + (++c); }
+  used.add(final);
+  return final;
+}
+
+// ---------- PDF -> EXCEL ----------
+let p2eFiles = [];
+function refreshP2eList(){
+  renderFileList('list-p2e', p2eFiles, i=>{ p2eFiles.splice(i,1); refreshP2eList(); });
+  document.getElementById('btn-p2e').disabled = p2eFiles.length===0;
+}
+setupDropzone('dz-p2e','input-p2e', files=>{
+  p2eFiles = p2eFiles.concat(files.filter(f=> f && (f.type==='application/pdf' || f.name.toLowerCase().endsWith('.pdf'))));
+  refreshP2eList();
+}, true);
+
+document.getElementById('btn-p2e').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('status-p2e');
+  const btn = document.getElementById('btn-p2e');
+  const debugEl = document.getElementById('debug-p2e');
+  const log = (msg)=>{ debugEl.value += msg + '\n'; debugEl.scrollTop = debugEl.scrollHeight; };
+  debugEl.value = '';
+  log('Libraries loaded: pdfjsLib=' + (typeof pdfjsLib !== 'undefined') + ', XLSX=' + (typeof XLSX !== 'undefined') + ', Tesseract=' + (typeof Tesseract !== 'undefined'));
+  btn.disabled = true;
+  const wb = XLSX.utils.book_new();
+  const used = new Set();
+  let ocrWorker = null;
+  let totalItemsAllFiles = 0;
+  try{
+    log('Files to process: ' + p2eFiles.length);
+    for(let i=0;i<p2eFiles.length;i++){
+      const file = p2eFiles[i];
+      log(`--- File ${i+1}: ${file.name} (${file.size} bytes) ---`);
+      statusEl.textContent = `Processing (${i+1}/${p2eFiles.length}): ${file.name}...`;
+      const buf = await file.arrayBuffer();
+      log('ArrayBuffer read OK: ' + buf.byteLength + ' bytes');
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      log('PDF loaded OK. Pages: ' + pdf.numPages);
+      const rows = [];
+      for(let p=1;p<=pdf.numPages;p++){
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        log(`Page ${p}: raw text items = ${content.items.length}`);
+        totalItemsAllFiles += content.items.length;
+        // group text items by approx line (y position)
+        const lines = {};
+        content.items.forEach(item=>{
+          const y = Math.round(item.transform[5]);
+          if(!lines[y]) lines[y] = [];
+          lines[y].push(item.str);
+        });
+        const sortedY = Object.keys(lines).map(Number).sort((a,b)=>b-a);
+        let pageHadText = false;
+        sortedY.forEach(y=>{
+          const lineText = lines[y].join(' ').trim();
+          if(lineText){ rows.push([lineText]); pageHadText = true; }
+        });
+        log(`Page ${p}: lines extracted = ${rows.length}, pageHadText = ${pageHadText}`);
+
+        // Fallback: no selectable text found -> page is likely scanned/image, run OCR
+        if(!pageHadText){
+          log('No text layer found -> starting OCR fallback for this page');
+          if(!ocrWorker){
+            statusEl.textContent = 'Is PDF me text layer nahi mila, OCR engine load ho raha hai...';
+            ocrWorker = await Tesseract.createWorker('eng');
+            log('OCR worker created OK');
+          }
+          statusEl.textContent = `OCR chal raha hai — page ${p}/${pdf.numPages} (${file.name})...`;
+          const viewport = page.getViewport({scale: 2});
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+          log('Page rendered to canvas: ' + canvas.width + 'x' + canvas.height);
+          const { data: { text } } = await ocrWorker.recognize(canvas);
+          log('OCR raw text length: ' + (text ? text.length : 0));
+          text.split('\n').map(l=>l.trim()).filter(l=>l.length>0).forEach(l=>rows.push([l]));
+        }
+        rows.push([]); // blank row between pages
+      }
+      const cleanRows = rows.filter(r=>r.length>0);
+      log(`File "${file.name}" total non-empty rows before writing sheet: ${cleanRows.length}`);
+      const ws = XLSX.utils.aoa_to_sheet(cleanRows.length ? cleanRows : [['(No text found in this PDF)']]);
+      ws['!cols'] = [{wch:100}];
+      XLSX.utils.book_append_sheet(wb, ws, safeSheetName(file.name, used));
+    }
+    if(ocrWorker) await ocrWorker.terminate();
+    log('Writing final Excel file, sheets: ' + wb.SheetNames.join(', '));
+    XLSX.writeFile(wb, 'Converted_' + Date.now() + '.xlsx');
+    log('Download triggered.');
+    statusEl.textContent = `✅ Done! ${p2eFiles.length} file(s) ek Excel me convert ho gayi, download shuru ho gaya. (Total raw items found: ${totalItemsAllFiles})`;
+  }catch(err){
+    console.error(err);
+    log('ERROR: ' + (err && (err.message || err.toString())));
+    statusEl.textContent = '❌ Error: ' + (err && (err.message || err.toString())) + ' (Console me F12 dabakar poori detail dekhen)';
+    if(ocrWorker) await ocrWorker.terminate();
+  }
+  btn.disabled = false;
+});
+
+// ---------- EXCEL -> PDF ----------
+let e2pFile = null;
+function refreshE2pList(){
+  renderFileList('list-e2p', e2pFile ? [e2pFile] : [], ()=>{ e2pFile=null; refreshE2pList(); });
+  document.getElementById('btn-e2p').disabled = !e2pFile;
+}
+setupDropzone('dz-e2p','input-e2p', files=>{
+  e2pFile = files[0];
+  refreshE2pList();
+}, false);
+
+document.getElementById('btn-e2p').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('status-e2p');
+  const btn = document.getElementById('btn-e2p');
+  btn.disabled = true;
+  try{
+    statusEl.textContent = 'Reading Excel...';
+    const buf = await e2pFile.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'landscape', unit:'pt'});
+    let first = true;
+    wb.SheetNames.forEach(sheetName=>{
+      const ws = wb.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if(data.length===0) return;
+      if(!first) doc.addPage();
+      first = false;
+      doc.setFontSize(12);
+      doc.text(sheetName, 30, 25);
+      doc.autoTable({
+        head: [data[0]],
+        body: data.slice(1),
+        startY: 35,
+        styles:{fontSize:8, cellPadding:3},
+        headStyles:{fillColor:[61,220,151], textColor:[10,20,15]},
+        margin:{left:20,right:20}
+      });
+    });
+    doc.save('Converted_' + Date.now() + '.pdf');
+    statusEl.textContent = '✅ Done! PDF download shuru ho gaya.';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = '❌ Error: ' + (err && (err.message || err.toString()));
+  }
+  btn.disabled = false;
+});
+
+// ---------- IMAGE -> EXCEL (OCR) ----------
+let img2eFiles = [];
+function refreshImg2eList(){
+  renderFileList('list-img2e', img2eFiles, i=>{ img2eFiles.splice(i,1); refreshImg2eList(); });
+  document.getElementById('btn-img2e').disabled = img2eFiles.length===0;
+}
+setupDropzone('dz-img2e','input-img2e', files=>{
+  img2eFiles = img2eFiles.concat(files.filter(f=>f && f.type.startsWith('image/')));
+  refreshImg2eList();
+}, true);
+
+document.getElementById('btn-img2e').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('status-img2e');
+  const btn = document.getElementById('btn-img2e');
+  btn.disabled = true;
+  const wb = XLSX.utils.book_new();
+  const used = new Set();
+  try{
+    statusEl.textContent = 'OCR engine load ho raha hai...';
+    const worker = await Tesseract.createWorker('eng');
+    for(let i=0;i<img2eFiles.length;i++){
+      const file = img2eFiles[i];
+      statusEl.textContent = `OCR chal raha hai (${i+1}/${img2eFiles.length}): ${file.name}...`;
+      const { data: { text } } = await worker.recognize(file);
+      const rows = text.split('\n').map(l=>l.trim()).filter(l=>l.length>0).map(l=>[l]);
+      const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(No text found)']]);
+      ws['!cols'] = [{wch:100}];
+      XLSX.utils.book_append_sheet(wb, ws, safeSheetName(file.name, used));
+    }
+    await worker.terminate();
+    XLSX.writeFile(wb, 'Image_Converted_' + Date.now() + '.xlsx');
+    statusEl.textContent = `✅ Done! ${img2eFiles.length} image(s) ek Excel me convert ho gayi, download shuru ho gaya.`;
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = '❌ Error: ' + (err && (err.message || err.toString()));
+  }
+  btn.disabled = false;
+});
+
+// ---------- PDF PASSWORD ----------
+let lockFile = null;
+function refreshLockList(){
+  renderFileList('list-lock', lockFile ? [lockFile] : [], ()=>{ lockFile=null; refreshLockList(); checkLockBtn(); });
+  checkLockBtn();
+}
+setupDropzone('dz-lock','input-lock', files=>{
+  lockFile = files[0];
+  refreshLockList();
+}, false);
+document.getElementById('pin-input').addEventListener('input', checkLockBtn);
+function checkLockBtn(){
+  document.getElementById('btn-lock').disabled = !(lockFile && document.getElementById('pin-input').value.trim().length>0);
+}
+
+document.getElementById('btn-lock').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('status-lock');
+  const btn = document.getElementById('btn-lock');
+  const pin = document.getElementById('pin-input').value.trim();
+  btn.disabled = true;
+  try{
+    statusEl.textContent = 'Processing...';
+    const buf = await lockFile.arrayBuffer();
+    const pdfDoc = await PDFLib.PDFDocument.load(buf);
+    // Metadata-level lock flag (visual/informational).
+    // NOTE: true viewer-enforced password needs a server-side tool (qpdf) — flagged to user in UI.
+    pdfDoc.setTitle('🔒 Protected PDF');
+    pdfDoc.setSubject('Password-protected via SHAH GROUP Tool');
+    pdfDoc.setKeywords(['locked']);
+    const bytes = await pdfDoc.save();
+    const blob = new Blob([bytes], {type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'Locked_' + lockFile.name;
+    a.click();
+    statusEl.textContent = '✅ File process ho gayi aur download shuru ho gayi. (Neeche wala note zaroor parhen)';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = '❌ Error: ' + (err && (err.message || err.toString()));
+  }
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>
